@@ -1,0 +1,69 @@
+#-*- encoding:utf8 -*-
+
+ 
+
+import urllib,re,json,csv,time
+
+from bs4 import BeautifulSoup as bs,SoupStrainer as ss
+
+ 
+
+def nickForWeibo(name):
+
+    url="http://s.weibo.com/user/"+urllib.quote(urllib.quote(name))
+
+    bk=urllib.urlopen(url).read()
+
+    lt=re.search(r'\{"pid":"pl_user_feedList".*?\}',bk,re.S)
+
+    try:
+
+        jscode=lt.group(0)
+
+    except AttributeError:
+
+        print "可能触发了防机器人机制..."
+
+        return None
+
+    fl=json.loads(jscode)
+
+    rlkt= fl['html'].encode("utf8")
+
+    bss=bs(rlkt,parse_only=ss("div",{"class":"pl_personlist"}))
+
+    hi=bss.find_all("div",{"class":"person_detail"})
+
+    rlt=None
+
+    for xbs in hi:
+
+        rname=xbs.find("p",{"class":"person_name"}).text.strip()
+
+        fname=rname       
+
+        try:
+
+            fname=xbs.find("div",{"class":"person_reason"} ).find("a").text
+
+        except AttributeError:
+
+            pass
+
+        if name.strip() in [rname.encode("utf8"),fname.encode("utf8")]:
+
+            rlt={"name":rname}
+
+            _male=xbs.find("span",{"class":["m_icon"]})
+
+            _addr=_male.find_next_sibling("span")
+
+            _url=_addr.find_next_sibling("a")
+
+            uid=xbs.find("a",{"title":rname}).get("uid")
+
+            rlt["uid"],rlt["male"],rlt["address"],rlt['formername'],rlt["url"]=uid,_male.get("title"),_addr.text,fname,_url.text
+
+            break           
+
+    return rlt
