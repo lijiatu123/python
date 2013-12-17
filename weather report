@@ -1,0 +1,75 @@
+def get_weather() :
+
+    #shanghai, 2151849
+
+    url = 'http://weather.yahooapis.com/forecastrss?w=2151849&u=c'
+
+    # namespace
+
+    yweather = '{http://xml.weather.yahoo.com/ns/rss/1.0}'
+
+    geo = '{http://www.w3.org/2003/01/geo/wgs84_pos#}'
+
+ 
+
+    # get weather data
+
+    data = urllib2.urlopen(url).read()
+
+    #tree = ET.ElementTree(file='weather.xml')
+
+    tree = ET.fromstring(data)
+
+ 
+
+    root = tree
+
+    #root = tree.getroot() #从文件读时启用此行代码
+
+    #print root.tag, root.attrib
+
+    content = 'City:shanghai\n'
+
+    channel = root.find('channel')
+
+    wind = channel.find(yweather+'wind')
+
+    content += 'Chill:%s direction:%s speed:%skm/h\n' % (wind.attrib['chill'], wind.attrib['direction'], wind.attrib['speed'])
+
+    atmosphere = channel.find(yweather+'atmosphere')
+
+    content += 'Humidity:%s visibility:%s pressure:%smb rising:%s\n' % (atmosphere.attrib['humidity'], atmosphere.attrib['visibility'], atmosphere.attrib['pressure'], atmosphere.attrib['rising'])
+
+    astronomy = channel.find(yweather+'astronomy')
+
+    content += 'Sunrise:%s sunset:%s\n' % (astronomy.attrib['sunrise'], astronomy.attrib['sunset'])
+
+ 
+
+    item = channel.find('item')
+
+    pubdate = item.find('pubDate')
+
+    content += 'Public on %s\n' % pubdate.text
+
+ 
+
+    current = item.find(yweather + 'condition')
+
+    content += 'Current: %s℃ %s\n' % (current.attrib['temp'], weather_table[int(current.attrib['code'])-1])
+
+ 
+
+    #forecast
+
+    for node in item.iter(yweather + 'forecast'):
+
+        content += '%s %s-%s℃ %s\n' % (node.attrib['day'],
+
+            node.attrib['low'],node.attrib['high'], weather_table[int(node.attrib['code'])-1])
+
+ 
+
+    #print content
+
+    return content
