@@ -1,71 +1,94 @@
 python
 ======
-#-*- encoding:utf8 -*-
+#! /bin/env python
+
+# -*- coding: utf-8 -*-
+
+__author__ = 'anonymous_ch'
+
+import urllib,urllib2,cookielib,re
 
  
 
-import urllib,re,json,csv,time
+ 
 
-from bs4 import BeautifulSoup as bs,SoupStrainer as ss
+def login_func():
+
+    login_page = "http://www.renren.com/ajaxLogin/login"
+
+    data = {'email': 'your_email', 'password': 'your_password'}
+
+    post_data = urllib.urlencode(data)
+
+    cj = cookielib.CookieJar()
+
+    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+
+    urllib2.install_opener(opener)
+
+    print u"登录人人网"
+
+    req = opener.open(login_page, post_data)
+
+    req = urllib2.urlopen("http://www.renren.com/home")
+
+    html = req.read()
+
+    uid = re.search("'ruid':'(\d+)'", html).group(1)#获取用户的uid"
+
+    print  u"登陆成功"
+
+    return uid
 
  
 
-def nickForWeibo(name):
+ 
 
-    url="http://s.weibo.com/user/"+urllib.quote(urllib.quote(name))
+def get_list(uid):
 
-    bk=urllib.urlopen(url).read()
+    pagenum = 0
 
-    lt=re.search(r'\{"pid":"pl_user_feedList".*?\}',bk,re.S)
+    print u"开始解析好友列表"
 
-    try:
+    while True:
 
-        jscode=lt.group(0)
+        page = "http://friend.renren.com/GetFriendList.do?curpage=" + str(pagenum) + "&id=" + str(uid)
 
-    except AttributeError:
+        res = urllib2.urlopen(page)
 
-        print "可能触发了防机器人机制..."
+        html = res.read()
 
-        return None
+        pattern = '<a href="http://www\.renren\.com/profile\.do\?id=(\d+)"><img src="[\S]*" alt="[\S]*[\s]\((.*)\)" />'
 
-    fl=json.loads(jscode)
+        m = re.findall(pattern, html)#查找目标
 
-    rlkt= fl['html'].encode("utf8")
+        if len(m) == 0:
 
-    bss=bs(rlkt,parse_only=ss("div",{"class":"pl_personlist"}))
+            break#不存在
 
-    hi=bss.find_all("div",{"class":"person_detail"})
+        for i in range(0, len(m)):
 
-    rlt=None
+            userid = m[i][0]
 
-    for xbs in hi:
+            uname = m[i][1]
 
-        rname=xbs.find("p",{"class":"person_name"}).text.strip()
+            try:
 
-        fname=rname       
+                print u"账户："+userid+u"     姓名："+unicode(uname,'utf-8')
 
-        try:
+            except:
 
-            fname=xbs.find("div",{"class":"person_reason"} ).find("a").text
+                print u"账户："+userid+u"     姓名：",
 
-        except AttributeError:
+                print uname,
 
-            pass
+                print " "
 
-        if name.strip() in [rname.encode("utf8"),fname.encode("utf8")]:
+        pagenum += 1
 
-            rlt={"name":rname}
+    print u"好友列表分析完毕."
 
-            _male=xbs.find("span",{"class":["m_icon"]})
+ 
+if __name__ =="__main__":
 
-            _addr=_male.find_next_sibling("span")
-
-            _url=_addr.find_next_sibling("a")
-
-            uid=xbs.find("a",{"title":rname}).get("uid")
-
-            rlt["uid"],rlt["male"],rlt["address"],rlt['formername'],rlt["url"]=uid,_male.get("title"),_addr.text,fname,_url.text
-
-            break           
-
-    return rlt
+    get_list(login_func())
